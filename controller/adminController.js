@@ -2,7 +2,6 @@ const admin = require("../model/admin");
 const Article = require("../model/article");
 const User = require("../model/user");
 const UserProfile = require("../model/userProfile");
-const { sendMail, createOtpEmail } = require("../service/nodemail");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");;
@@ -32,8 +31,6 @@ async function attachProfiles(records, userKey = "") {
   return records;
 }
 
-let subjectForAdminReg = "Complete Your Registration";
-
 async function RegisterAdmin(req, res){
     try {
         const{email, password} = req.body;
@@ -46,38 +43,21 @@ async function RegisterAdmin(req, res){
 
         if(existingAdmin){
             return res.status(400).json({
-                message: "Email already exists,Kindly register with a new email"
+                message: "Email already exists, kindly register with a new email"
             });
         }
-            //   declare hashpassword,otp,otptiming
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        const otp = Math.floor(1000 + Math.random() * 9000);
-        const otpTiming = new Date();
-        otpTiming.setMinutes(otpTiming.getMinutes() + 10);
 
         const newAdminUser = new admin({
             email:email,
             password:hashedPassword,
-            otp:otp,
-            otpTiming:otpTiming,
+            verified: true,
         });
         await newAdminUser.save();
 
-        const otpEmail = createOtpEmail({ otp, expiresInMinutes: 10, audience: "admin" });
-        const mailResult = await sendMail({
-            to:email,
-            subject: subjectForAdminReg,
-            ...otpEmail,
-        });
-
-        if (!mailResult.success) {
-            return res.status(502).json({
-              message: "Your account was created, but we could not deliver the OTP. Please request a new OTP.",
-            });
-        }
-
-        res.status(200).json({
-            message: "Your regitration is Successfull",
+        res.status(201).json({
+            message: "Admin registration successful. Please sign in.",
             user:{
                 id:newAdminUser._id,
                 email:newAdminUser.email,
@@ -103,10 +83,6 @@ async function Login(req, res) {
 
     if (!isAdmin) {
       return res.status(404).send("Incorrect Email");
-    }
-
-    if (!isAdmin.verified) {
-      return res.status(403).json({ message: "Please verify your email before signing in" });
     }
 
     const comparePassword = await bcrypt.compare(password, isAdmin.password);
@@ -275,106 +251,9 @@ async function deleteAdminUser(req, res) {
   }
 }
 
-async function verifyOTP(req, res) {
-  try {
-    const { otp, email } = req.body;
-
-    if (!otp || !email) {
-      return res.status(400).json({ message: "Email and OTP are required" });
-    }
-
-    const findAdmin = await admin.findOne({ email: email });
-
-    if (!findAdmin) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (!findAdmin.otpTiming || findAdmin.otpTiming < new Date()) {
-      return res.status(403).json({ message: "OTP expired. Request a new OTP." });
-    }
-
-    if (Number(otp) !== findAdmin.otp) {
-      return res.status(403).json({ message: "Invalid OTP" });
-    }
-
-    findAdmin.verified = true;
-    findAdmin.otp = undefined;
-    findAdmin.otpTiming = undefined;
-    await findAdmin.save();
-
-    return res.status(200).json({ message: "Admin verified successfully" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
-}
-
-async function resendOTP(req, res) {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        message: "Email is required",
-      });
-    }
-
-    const findAdmin = await admin.findOne({ email });
-
-    if (!findAdmin) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    if (findAdmin.verified) {
-      return res.status(400).json({
-        message: "User is already verified",
-      });
-    }
-
-    const otp = Math.floor(1000 + Math.random() * 9000);
-
-   
-    const otpTiming = new Date();
-    otpTiming.setMinutes(otpTiming.getMinutes() + 10);
-
-    findAdmin.otp = otp;
-    findAdmin.otpTiming = otpTiming;
-
-    await findAdmin.save();
-
-    const otpEmail = createOtpEmail({ otp, expiresInMinutes: 10, audience: "admin" });
-    const mailResult = await sendMail({
-      to: findAdmin.email,
-      subject: "Your New OTP",
-      ...otpEmail,
-    });
-
-    if (!mailResult.success) {
-      return res.status(502).json({ message: "We could not deliver the OTP. Please try again." });
-    }
-
-    return res.status(200).json({
-      message: "A new OTP has been sent successfully.",
-      user: { id: findAdmin._id, email: findAdmin.email },
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-      
-
-    });
-  }
-}
 module.exports = {
   RegisterAdmin,
   Login,
-  verifyOTP,
   getAdmin,
   getDashboard,
   getAdminPosts,
@@ -384,5 +263,4 @@ module.exports = {
   getAdminUserProfile,
   updateAdminUser,
   deleteAdminUser,
-  resendOTP,
 };

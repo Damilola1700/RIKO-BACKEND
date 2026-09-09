@@ -4,7 +4,6 @@ const router = express.Router();
 const {
 	RegisterAdmin,
 	Login,
-	verifyOTP,
 	getAdmin,
 	getDashboard,
 	getAdminPosts,
@@ -14,7 +13,6 @@ const {
 	getAdminUserProfile,
 	updateAdminUser,
 	deleteAdminUser,
-	resendOTP,
 } = require("../controller/adminController");
 
 const authenticate = require("../middleware/authadmin");
@@ -34,7 +32,5 @@ router.patch("/users/:id", authenticate, updateAdminUser);
 router.delete("/users/:id", authenticate, deleteAdminUser);
 router.post("/register", RegisterAdmin);
 router.post("/login", Login);
-router.post("/verifyotp", verifyOTP);
-router.post("/resendotp", resendOTP);
 
 module.exports = router;
