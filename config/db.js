@@ -8,28 +8,28 @@ dotenv.config();
 
 const MONGODB = process.env.MONGODB_URL
 
-async function ensureDefaultAdmin() {
-  const email = "lovethdamilola206@gmail.com";
-  const password = "loveth111";
+// async function ensureDefaultAdmin() {
+//   const email = "lovethdamilola206@gmail.com";
+//   const password = "loveth111";
 
-  const existingAdmin = await admin.findOne({ email: email.toLowerCase() });
+//   const existingAdmin = await admin.findOne({ email: email.toLowerCase() });
 
-  if (existingAdmin) {
-    const isPasswordCorrect = await bcrypt.compare(password, existingAdmin.password);
-    if (!isPasswordCorrect) {
-      existingAdmin.password = await bcrypt.hash(password, 10);
-      existingAdmin.verified = true;
-      await existingAdmin.save();
-    }
-    return;
-  }
+//   if (existingAdmin) {
+//     const isPasswordCorrect = await bcrypt.compare(password, existingAdmin.password);
+//     if (!isPasswordCorrect) {
+//       existingAdmin.password = await bcrypt.hash(password, 10);
+//       existingAdmin.verified = true;
+//       await existingAdmin.save();
+//     }
+//     return;
+//   }
 
-  await admin.create({
-    email: email.toLowerCase(),
-    password: await bcrypt.hash(password, 10),
-    verified: true,
-  });
-}
+//   await admin.create({
+//     email: email.toLowerCase(),
+//     password: await bcrypt.hash(password, 10),
+//     verified: true,
+//   });
+// }
 
 const connectDB = async() => {
     try {
